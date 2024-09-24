@@ -1,5 +1,3 @@
-from gc import get_objects
-
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
@@ -7,14 +5,12 @@ from django.urls import reverse_lazy
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .forms import DriverCreationForm, DriverLicenseUpdateForm, CarForm
-from .models import Driver, Car, Manufacturer
+from taxi.forms import DriverCreationForm, DriverLicenseUpdateForm, CarForm
+from taxi.models import Driver, Car, Manufacturer
 
 
 @login_required
 def index(request):
-    """View function for the home page of the site."""
-
     num_drivers = Driver.objects.count()
     num_cars = Car.objects.count()
     num_manufacturers = Manufacturer.objects.count()
@@ -74,26 +70,17 @@ class CarDetailView(LoginRequiredMixin, generic.DetailView):
             context["is_driver"] = car.drivers.filter(pk=user.id).exists()
         return context
 
-
-class CarAssignView(LoginRequiredMixin, generic.UpdateView):
     def post(self, request, *args, **kwargs):
-        car = get_object_or_404(Car, pk=kwargs["pk"])
-        user = self.request.user
+        car = self.get_object()
+        driver = self.request.user
+        action = request.POST.get("action")
 
-        if isinstance(user, Driver):
-            car.drivers.add(user)
-            return redirect("taxi:car-detail", pk=car.id)
-        return HttpResponseForbidden("Only drivers can do it")
-
-
-class CarResignView(LoginRequiredMixin, generic.UpdateView):
-    def post(self, request, *args, **kwargs):
-        car = get_object_or_404(Car, pk=kwargs["pk"])
-        user = self.request.user
-
-        if isinstance(user, Driver):
-            car.drivers.remove(user)
-            return redirect("taxi:car-detail", pk=car.id)
+        if isinstance(driver, Driver):
+            if action == "Add":
+                car.drivers.add(driver)
+            if action == "Delete":
+                car.drivers.remove(driver)
+            return redirect("taxi:car-detail", pk=car.pk)
         return HttpResponseForbidden("Only drivers can do it")
 
 
@@ -105,7 +92,7 @@ class CarCreateView(LoginRequiredMixin, generic.CreateView):
 
 class CarUpdateView(LoginRequiredMixin, generic.UpdateView):
     model = Car
-    form_class = CarForm
+    fields = "__all__"
     success_url = reverse_lazy("taxi:car-list")
 
 
