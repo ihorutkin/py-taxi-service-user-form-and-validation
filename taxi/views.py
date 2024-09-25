@@ -66,9 +66,7 @@ class CarDetailView(LoginRequiredMixin, generic.DetailView):
         car = self.object
         user = self.request.user
 
-        if isinstance(user, Driver):
-            context["is_driver"] = car.drivers.filter(pk=user.id).exists()
-        return context
+        context["is_driver"] = car.drivers.filter(pk=user.id).exists()
 
     def post(self, request, *args, **kwargs):
         car = self.get_object()
